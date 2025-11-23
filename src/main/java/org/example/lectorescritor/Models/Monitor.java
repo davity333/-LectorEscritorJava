@@ -5,9 +5,10 @@ import java.util.ArrayList;
 public class Monitor {
         private boolean escritorActivo = false;
         private int lectoresActivos = 0;
+        private int escritoresEnEspera = 0;
 
         public synchronized void startRead() throws InterruptedException {
-            while (escritorActivo) {
+            while (escritorActivo || lectoresActivos > 0) {
                 wait();
             }
             lectoresActivos++;
@@ -24,6 +25,7 @@ public class Monitor {
         while(escritorActivo || lectoresActivos > 0){
             wait();
         }
+        escritoresEnEspera--;
         escritorActivo = true;
     }
 
