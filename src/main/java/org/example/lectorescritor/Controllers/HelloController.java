@@ -42,34 +42,45 @@ public class HelloController {
         int cantidadInput = Integer.parseInt(textField.getText());
         quantityWait = cantidadInput;
 
-        if (writerWait){
-            System.out.println(quantityWait + " Lectores esperando");
-            Platform.runLater(() -> numLectoresEsperando.setText(String.valueOf(quantityWait)));
-        }
+        Platform.runLater(() -> {
+            numLectoresEsperando.setText(String.valueOf(cantidadInput));
+            lectoresActivos.setText("0");
+        });
 
         new Thread(() -> {
             try {
                 monitor.startRead();
+
                 for (int i = 1; i <= cantidadInput; i++) {
                     if (limpiar) break;
                     int valor = i;
+
                     Platform.runLater(() -> {
                         lectoresActivos.setText(String.valueOf(valor));
                         textStatus.setText("Lectores ejecutándose");
-                        System.out.println("Lector: "+valor);
+
+                        int restantes = cantidadInput - valor;
+                        numLectoresEsperando.setText(String.valueOf(restantes));
+
+                        System.out.println("Lector: " + valor);
                         estadoCircle.setFill(Color.GREEN);
                     });
-                    Thread.sleep(800); // medio segundo entre cada paso
+
+                    Thread.sleep(2000); // wait dentro
                 }
-                Thread.sleep(2000);
+
+                Thread.sleep(500); // wait afuera
                 monitor.endRead();
                 writerWait = false;
+
                 Platform.runLater(() -> {
                     textStatus.setText("ESPERANDO");
                     numEscritoresEsperando.setText("0");
                     lectoresActivos.setText("0");
+                    numLectoresEsperando.setText("0");
                     estadoCircle.setFill(Color.GRAY);
                 });
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -82,41 +93,61 @@ public class HelloController {
         int cantidadInput = Integer.parseInt(textField.getText());
         quantityWait = cantidadInput;
 
-        if(readWait){
-            System.out.println(quantityWait + " Escritores esperando");
-            Platform.runLater(() -> numEscritoresEsperando.setText(String.valueOf(quantityWait)));
-        }
+
+        Platform.runLater(() -> {
+            numEscritoresEsperando.setText(String.valueOf(cantidadInput));
+            numEscritor.setText("0");
+        });
 
         new Thread(() -> {
-            try {
+            for (int i = 1; i <= cantidadInput; i++) {
+                if (limpiar) break;
 
-                monitor.startWriter();
-                for (int i = 1; i <= cantidadInput; i++) {
-                    if (limpiar) break;
-                    int valor = i;
+                final int escritorId = i;
+
+                try {
+                    monitor.startWriter();
+
                     Platform.runLater(() -> {
-                        numEscritor.setText(String.valueOf(valor));
+                        numEscritor.setText("1");
                         textStatus.setText("Escritor ejecutándose");
-                        System.out.println("Escritor: "+valor);
                         estadoCircle.setFill(Color.BLUE);
+
+                        int restantes = cantidadInput - escritorId;
+                        numEscritoresEsperando.setText(String.valueOf(restantes));
                     });
-                    Thread.sleep(800);
+
+                    System.out.println("Escritor activo: " + escritorId);
+                    Thread.sleep(3000); // dentro
+                    monitor.endWriter();
+
+                    Platform.runLater(() -> {
+                        numEscritor.setText("0");
+                        if (escritorId < cantidadInput) {
+                            textStatus.setText("ESPERANDO próximo escritor");
+                            System.out.println("Escritor " + escritorId +" saliendo");
+                            estadoCircle.setFill(Color.GRAY);
+                        }
+                    });
+                    Thread.sleep(700); //fuera
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
-                Thread.sleep(2000);
-                monitor.endWriter();
-                writerWait = false;
-                Platform.runLater(() -> {
-                    textStatus.setText("ESPERANDO");
-                    numLectoresEsperando.setText("0");
-                    numEscritor.setText("0");
-                    estadoCircle.setFill(Color.GRAY);
-                });
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
+
+            // Limpiar estado final
+            Platform.runLater(() -> {
+                writerWait = false;
+                textStatus.setText("ESPERANDO");
+                estadoCircle.setFill(Color.GRAY);
+                numEscritor.setText("0");
+                numEscritoresEsperando.setText("0");
+            });
+
         }).start();
     }
-
     @FXML
     protected void clickReset() throws InterruptedException{
         limpiar = true;

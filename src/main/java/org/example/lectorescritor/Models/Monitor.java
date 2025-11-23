@@ -21,7 +21,7 @@ public class Monitor {
         }
 
     public synchronized void startWriter() throws InterruptedException {
-        if(escritorActivo || lectoresActivos > 0){
+        while(escritorActivo || lectoresActivos > 0){
             wait();
         }
         escritorActivo = true;
