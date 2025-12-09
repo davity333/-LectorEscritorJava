@@ -3,59 +3,61 @@ package org.example.lectorescritor.Models;
 public class Monitor {
     private boolean escritorActivo = false;
     private int lectoresActivos = 0;
-    private int escritoresEnEspera = 0;
-    private volatile boolean resetRequested = false; // Nueva bandera
+    private volatile boolean resetRequested = false;
 
     public synchronized void startRead() throws InterruptedException {
-        while ((escritorActivo || lectoresActivos > 0) && !resetRequested) {
+        while (escritorActivo || resetRequested) {
             if (resetRequested) {
-                Thread.currentThread().interrupt();
                 throw new InterruptedException("Reset solicitado");
             }
             wait();
         }
-        if (resetRequested) {
-            Thread.currentThread().interrupt();
-            throw new InterruptedException("Reset solicitado");
-        }
         lectoresActivos++;
+        System.out.println("Lector entra. Lectores activos: " + lectoresActivos + ", Escritor activo: " + escritorActivo);
     }
 
     public synchronized void endRead() {
         lectoresActivos--;
+        System.out.println("Lector sale. Lectores activos: " + lectoresActivos + ", Escritor activo: " + escritorActivo);
+
         if (lectoresActivos == 0) {
             notifyAll();
         }
     }
 
-    public synchronized void startWriter() throws InterruptedException {
-        while((escritorActivo || lectoresActivos > 0) && !resetRequested) {
+    public synchronized void startWrite() throws InterruptedException {
+        while (escritorActivo || lectoresActivos > 0 || resetRequested) {
             if (resetRequested) {
-                Thread.currentThread().interrupt();
                 throw new InterruptedException("Reset solicitado");
             }
             wait();
         }
-        if (resetRequested) {
-            Thread.currentThread().interrupt();
-            throw new InterruptedException("Reset solicitado");
-        }
-        escritoresEnEspera--;
+
         escritorActivo = true;
+        System.out.println("Escritor entra. Lectores activos: " + lectoresActivos + ", Escritor activo: " + escritorActivo);
     }
 
-    public synchronized void endWriter() {
+    public synchronized void endWrite() {
         escritorActivo = false;
-        notifyAll();
+        System.out.println("Escritor sale. Lectores activos: " + lectoresActivos + ", Escritor activo: " + escritorActivo);
+        notifyAll();  // Notificar a todos (tanto lectores como otros escritores)
     }
 
-    // NUEVO MÉTODO: Resetear todo
     public synchronized void resetAll() {
         resetRequested = true;
         escritorActivo = false;
         lectoresActivos = 0;
-        escritoresEnEspera = 0;
-        notifyAll(); // Despierta a todos los hilos en wait()
-        resetRequested = false; // Opcional: volver a false después
+        notifyAll();
+        resetRequested = false;
+        System.out.println("Monitor reseteado");
+    }
+
+
+    public synchronized int getLectoresActivos() {
+        return lectoresActivos;
+    }
+
+    public synchronized boolean isEscritorActivo() {
+        return escritorActivo;
     }
 }

@@ -21,27 +21,35 @@ public class HelloController {
 
     Monitor monitor = new Monitor();
 
-    // Guardar referencias a los hilos para poderlos interrumpir
     private Thread hiloLectores = null;
     private Thread hiloEscritores = null;
 
     @FXML
     protected void clickAddLector() {
-        // Si hay un hilo anterior, interrúmpelo
         if (hiloLectores != null && hiloLectores.isAlive()) {
             hiloLectores.interrupt();
         }
 
-        int cantidadInput = Integer.parseInt(textField.getText());
+        int cantidadInput = 0;
+        try {
+            cantidadInput = Integer.parseInt(textField.getText());
+        } catch (NumberFormatException e) {
+            cantidadInput = 1;
+        }
 
+        int finalCantidadInput = cantidadInput;
         Platform.runLater(() -> {
-            numLectoresEsperando.setText(String.valueOf(cantidadInput));
+            numLectoresEsperando.setText(String.valueOf(finalCantidadInput));
             lectoresActivos.setText("0");
+            // Asegurarse que el escritor está en 0
+            numEscritor.setText("0");
         });
 
+        int finalCantidadInput1 = cantidadInput;
+        int finalCantidadInput2 = cantidadInput;
         hiloLectores = new Thread(() -> {
             try {
-                for (int i = 1; i <= cantidadInput; i++) {
+                for (int i = 1; i <= finalCantidadInput2; i++) {
                     // Verificar si el hilo fue interrumpido
                     if (Thread.currentThread().isInterrupted()) {
                         throw new InterruptedException("Hilo interrumpido");
@@ -54,7 +62,7 @@ public class HelloController {
                         lectoresActivos.setText(String.valueOf(valor));
                         textStatus.setText("Lectores ejecutándose");
 
-                        int restantes = cantidadInput - valor;
+                        int restantes = finalCantidadInput1 - valor;
                         numLectoresEsperando.setText(String.valueOf(restantes));
 
                         System.out.println("Lector: " + valor);
@@ -64,6 +72,10 @@ public class HelloController {
                     Thread.sleep(2000);
 
                     monitor.endRead();
+
+                    Platform.runLater(() -> {
+                        lectoresActivos.setText(String.valueOf(monitor.getLectoresActivos()));
+                    });
 
                     Thread.sleep(500);
                 }
@@ -81,6 +93,8 @@ public class HelloController {
                 Platform.runLater(() -> {
                     textStatus.setText("INTERRUMPIDO");
                     estadoCircle.setFill(Color.RED);
+                    lectoresActivos.setText("0");
+                    numLectoresEsperando.setText("0");
                 });
             }
         });
@@ -95,22 +109,32 @@ public class HelloController {
             hiloEscritores.interrupt();
         }
 
-        int cantidadInput = Integer.parseInt(textField.getText());
+        int cantidadInput = 0;
+        try {
+            cantidadInput = Integer.parseInt(textField.getText());
+        } catch (NumberFormatException e) {
+            // Si no es un número válido, usar 1 por defecto
+            cantidadInput = 1;
+        }
 
+        int finalCantidadInput = cantidadInput;
         Platform.runLater(() -> {
-            numEscritoresEsperando.setText(String.valueOf(cantidadInput));
+            numEscritoresEsperando.setText(String.valueOf(finalCantidadInput));
             numEscritor.setText("0");
+            // Asegurarse que los lectores están en 0
+            lectoresActivos.setText("0");
         });
 
+        int finalCantidadInput1 = cantidadInput;
         hiloEscritores = new Thread(() -> {
             try {
-                for (int i = 1; i <= cantidadInput; i++) {
+                for (int i = 1; i <= finalCantidadInput1; i++) {
                     // Verificar si el hilo fue interrumpido
                     if (Thread.currentThread().isInterrupted()) {
                         throw new InterruptedException("Hilo interrumpido");
                     }
 
-                    monitor.startWriter();
+                    monitor.startWrite();
 
                     final int escritorId = i;
                     Platform.runLater(() -> {
@@ -118,18 +142,18 @@ public class HelloController {
                         textStatus.setText("Escritor ejecutándose");
                         estadoCircle.setFill(Color.BLUE);
 
-                        int restantes = cantidadInput - escritorId;
+                        int restantes = finalCantidadInput1 - escritorId;
                         numEscritoresEsperando.setText(String.valueOf(restantes));
                     });
 
                     System.out.println("Escritor activo: " + escritorId);
                     Thread.sleep(3000);
 
-                    monitor.endWriter();
+                    monitor.endWrite();
 
                     Platform.runLater(() -> {
                         numEscritor.setText("0");
-                        if (escritorId < cantidadInput) {
+                        if (escritorId < finalCantidadInput1) {
                             textStatus.setText("ESPERANDO próximo escritor");
                             estadoCircle.setFill(Color.GRAY);
                         }
@@ -150,6 +174,8 @@ public class HelloController {
                 Platform.runLater(() -> {
                     textStatus.setText("INTERRUMPIDO");
                     estadoCircle.setFill(Color.RED);
+                    numEscritor.setText("0");
+                    numEscritoresEsperando.setText("0");
                 });
             }
         });
@@ -175,7 +201,7 @@ public class HelloController {
         // 2. Resetear el monitor
         monitor.resetAll();
 
-        // 3. Actualizar UI
+        // 3. Actualizar la vista
         Platform.runLater(() -> {
             lectoresActivos.setText("0");
             numEscritor.setText("0");
